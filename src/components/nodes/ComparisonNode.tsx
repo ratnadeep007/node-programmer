@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 type NodeData = {
   operator: string;
@@ -20,11 +20,13 @@ type NodeData = {
 type ComparisonNodeProps = Pick<Node<NodeData>, 'id' | 'data'>;
 
 export default function ComparisonNode({ id, data }: ComparisonNodeProps) {
-  const operator = data.operator || '==';
+  const [operator, setOperator] = useState(data.operator || '==');
   const leftValue = data.leftValue ?? 0;
   const rightValue = data.rightValue ?? 0;
 
   const handleOperatorChange = (value: string) => {
+    setOperator(value);
+    data.operator = value;
     if (data.onChange) {
       data.onChange(id, value);
     }
