@@ -9,8 +9,11 @@ import {
   OnNodesDelete,
   OnSelectionChangeParams,
   NodeTypes,
+  useReactFlow,
+  ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import './styles/search.css';
 import { CodePreview } from './components/CodePreview';
 import NumberInputNode from './components/nodes/NumberInputNode';
 import StringInputNode from './components/nodes/StringInputNode';
@@ -27,6 +30,10 @@ import StringOperationNode from './components/nodes/StringOperationNode';
 import { useCallback, useState, useEffect } from 'react';
 import { useFlowExportImport } from './hooks/useFlowExportImport';
 import { useNodeOperations } from './hooks/useNodeOperations';
+import { useUndoRedo } from './hooks/useUndoRedo';
+import { useCopyPaste } from './hooks/useCopyPaste';
+import { useNodeSearch } from './hooks/useNodeSearch';
+import { SearchBar } from './components/SearchBar';
 import { Sidebar } from './components/Sidebar';
 import { NodeData } from './types';
 import { Node, Edge } from '@xyflow/react';
@@ -46,14 +53,28 @@ const nodeTypes: NodeTypes = {
   stringOperation: StringOperationNode,
 };
 
-function App() {
+function AppContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<NodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const deletePressed = useKeyPress(['Backspace', 'Delete']);
+  const { getViewport, setViewport } = useReactFlow();
   
   // Track selected elements
   const [selectedNodes, setSelectedNodes] = useState<Node<NodeData>[]>([]);
   const [selectedEdges, setSelectedEdges] = useState<Edge[]>([]);
+
+  // Initialize hooks
+  const { saveState, undo, redo, canUndo, canRedo } = useUndoRedo(setNodes, setEdges);
+  const { copySelectedNodes, paste } = useCopyPaste(edges, setNodes, setEdges);
+  const { 
+    searchTerm, 
+    setSearchTerm, 
+    searchResults, 
+    selectedResultIndex,
+    nextResult,
+    previousResult,
+    currentResult 
+  } = useNodeSearch(nodes);
 
   const onSelectionChange = useCallback(({ nodes, edges }: OnSelectionChangeParams) => {
     setSelectedNodes((nodes as Node<NodeData>[]) || []);
@@ -219,6 +240,136 @@ function App() {
     }
   }, [nodes, edges]);
 
+  // Update node highlighting when search result changes
+  useEffect(() => {
+    setNodes(nds => 
+      nds.map(node => ({
+        ...node,
+        className: node.id === currentResult?.id ? 'highlight-search' : ''
+      }))
+    );
+  }, [currentResult?.id, setNodes]);
+
+  // Center viewport on search result
+  useEffect(() => {
+    if (currentResult) {
+      const node = nodes.find(n => n.id === currentResult.id);
+      if (node) {
+        const nodeWidth = 150; // Approximate node width
+        const nodeHeight = 40; // Approximate node height
+        const padding = 50;
+
+        // Calculate zoom level that fits the node with padding
+        const zoom = Math.min(
+          (window.innerWidth - padding * 2) / nodeWidth,
+          (window.innerHeight - padding * 2) / nodeHeight,
+          2 // Max zoom level
+        );
+
+        // Calculate center position
+        const centerX = -(node.position.x + nodeWidth / 2) * zoom + window.innerWidth / 2;
+        const centerY = -(node.position.y + nodeHeight / 2) * zoom + window.innerHeight / 2;
+
+        // Use React Flow's setViewport to smoothly center on the node
+        setViewport({ x: centerX, y: centerY, zoom }, { duration: 800 });
+      }
+    }
+  }, [currentResult?.id, nodes, setViewport]);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key.toLowerCase()) {
+          case 'z':
+            if (event.shiftKey) {
+              event.preventDefault();
+              if (canRedo) redo();
+            } else {
+              event.preventDefault();
+              if (canUndo) undo();
+            }
+            break;
+          case 'c':
+            event.preventDefault();
+            copySelectedNodes(selectedNodes);
+            break;
+          case 'v':
+            event.preventDefault();
+            // Get viewport for paste position
+            const viewport = getViewport();
+            paste({ x: viewport.x + 100, y: viewport.y + 100 });
+            break;
+          case 'f':
+            event.preventDefault();
+            // Focus search input
+            const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+            if (searchInput) searchInput.focus();
+            break;
+        }
+      } else if (searchResults.length > 0) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (event.shiftKey) {
+            previousResult();
+          } else {
+            nextResult();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canUndo, canRedo, undo, redo, copySelectedNodes, paste, selectedNodes, getViewport, searchResults.length, nextResult, previousResult]);
+
+  // Save state for undo/redo after changes
+  useEffect(() => {
+    saveState(nodes, edges);
+  }, [nodes, edges, saveState]);
+
+  // Handle keyboard shortcuts for search navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        if (event.key.toLowerCase() === 'f') {
+          event.preventDefault();
+          const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+          if (searchInput) {
+            searchInput.focus();
+            searchInput.select(); // Select all text if any
+          }
+        }
+      } else if (searchResults.length > 0) {
+        switch (event.key) {
+          case 'Enter':
+            event.preventDefault();
+            if (event.shiftKey) {
+              previousResult();
+            } else {
+              nextResult();
+            }
+            break;
+          case 'ArrowUp':
+            event.preventDefault();
+            previousResult();
+            break;
+          case 'ArrowDown':
+            event.preventDefault();
+            nextResult();
+            break;
+          case 'Escape':
+            event.preventDefault();
+            setSearchTerm('');
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [searchResults.length, nextResult, previousResult, setSearchTerm]);
+
   return (
     <div className="w-screen h-screen flex overflow-hidden">
       <div className="overflow-y-auto">
@@ -229,7 +380,16 @@ function App() {
         />
       </div>
 
-      <div className="flex-1" onDrop={onDrop} onDragOver={onDragOver}>
+      <div className="flex-1 relative" onDrop={onDrop} onDragOver={onDragOver}>
+        <SearchBar
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          searchResults={searchResults}
+          selectedResultIndex={selectedResultIndex}
+          nextResult={nextResult}
+          previousResult={previousResult}
+        />
+        
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -251,6 +411,14 @@ function App() {
       {/* Code Preview */}
       <CodePreview nodes={nodes} edges={edges} />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ReactFlowProvider>
+      <AppContent />
+    </ReactFlowProvider>
   );
 }
 
