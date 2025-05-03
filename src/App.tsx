@@ -252,94 +252,168 @@ function App() {
     event.dataTransfer.dropEffect = 'move';
   };
 
+  // Export flow as JSON
+  const handleExport = useCallback(() => {
+    const flowData = {
+      nodes,
+      edges,
+      viewport: { x: 0, y: 0, zoom: 1 }
+    };
+    const dataStr = JSON.stringify(flowData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    
+    const exportName = 'flow-export.json';
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportName);
+    linkElement.click();
+  }, [nodes, edges]);
+
+  // Import flow from JSON
+  const handleImport = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const flowData = JSON.parse(event.target?.result as string);
+            setNodes(flowData.nodes || []);
+            setEdges(flowData.edges || []);
+          } catch (error) {
+            console.error('Failed to parse flow data:', error);
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    
+    input.click();
+  }, []);
+
   return (
     <div className="w-screen h-screen flex">
       {/* Toolbar */}
-      <div className="w-64 border-r border-gray-200 p-4 bg-background">
-        <h2 className="text-lg font-semibold mb-4">Nodes</h2>
-        <div className="space-y-4">
+      <div className="w-64 bg-slate-100 p-4 border-r border-slate-200">
+        {/* Export/Import buttons at top */}
+        <div className="flex flex-col gap-2 mb-6">
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+            Export Flow
+          </button>
+          <button
+            onClick={handleImport}
+            className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" transform="rotate(180 10 10)" />
+            </svg>
+            Import Flow
+          </button>
+        </div>
+
+        {/* Node sections in single column */}
+        <div className="text-sm font-semibold mb-4">Nodes</div>
+        <div className="flex flex-col gap-4">
           <CollapsibleSection title="Input">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e) => onDragStart(e, 'numberInput')}
-            >
-              Number Input
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e) => onDragStart(e, 'stringInput')}
-            >
-              String Input
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e) => onDragStart(e, 'booleanInput')}
-            >
-              Boolean Input
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                draggable
+                onDragStart={(e) => onDragStart(e, 'numberInput')}
+              >
+                Number Input
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                draggable
+                onDragStart={(e) => onDragStart(e, 'stringInput')}
+              >
+                String Input
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                draggable
+                onDragStart={(e) => onDragStart(e, 'booleanInput')}
+              >
+                Boolean Input
+              </Button>
+            </div>
           </CollapsibleSection>
 
           <CollapsibleSection title="Basic Operations">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e) => onDragStart(e, 'addition')}
-            >
-              Add
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e) => onDragStart(e, 'subtraction')}
-            >
-              Subtract
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e) => onDragStart(e, 'multiplication')}
-            >
-              Multiply
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                draggable
+                onDragStart={(e) => onDragStart(e, 'addition')}
+              >
+                Add
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                draggable
+                onDragStart={(e) => onDragStart(e, 'subtraction')}
+              >
+                Subtract
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                draggable
+                onDragStart={(e) => onDragStart(e, 'multiplication')}
+              >
+                Multiply
+              </Button>
+            </div>
           </CollapsibleSection>
 
           <CollapsibleSection title="Control Flow">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e) => onDragStart(e, 'comparison')}
-            >
-              Compare
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e) => onDragStart(e, 'ifElse')}
-            >
-              If-Else
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                draggable
+                onDragStart={(e) => onDragStart(e, 'comparison')}
+              >
+                Compare
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                draggable
+                onDragStart={(e) => onDragStart(e, 'ifElse')}
+              >
+                If-Else
+              </Button>
+            </div>
           </CollapsibleSection>
 
           <CollapsibleSection title="Output">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e) => onDragStart(e, 'display')}
-            >
-              Print
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                draggable
+                onDragStart={(e) => onDragStart(e, 'display')}
+              >
+                Print
+              </Button>
+            </div>
           </CollapsibleSection>
         </div>
       </div>
