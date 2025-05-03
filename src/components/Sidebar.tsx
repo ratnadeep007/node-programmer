@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { CollapsibleSection } from './CollapsibleSection';
-import { DragEvent } from 'react';
+import { DragEvent, useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 
 type SidebarProps = {
   onDragStart: (event: DragEvent<HTMLButtonElement>, nodeType: string) => void;
@@ -8,7 +10,43 @@ type SidebarProps = {
   onImport: () => void;
 };
 
+type NodeItem = {
+  type: string;
+  label: string;
+  category: string;
+};
+
+const NODE_ITEMS: NodeItem[] = [
+  { type: 'numberInput', label: 'Number Input', category: 'Input' },
+  { type: 'stringInput', label: 'String Input', category: 'Input' },
+  { type: 'booleanInput', label: 'Boolean Input', category: 'Input' },
+  { type: 'addition', label: 'Add', category: 'Basic Operations' },
+  { type: 'subtraction', label: 'Subtract', category: 'Basic Operations' },
+  { type: 'multiplication', label: 'Multiply', category: 'Basic Operations' },
+  { type: 'division', label: 'Divide', category: 'Basic Operations' },
+  { type: 'comparison', label: 'Compare', category: 'Control Flow' },
+  { type: 'booleanOperation', label: 'Boolean Operation', category: 'Control Flow' },
+  { type: 'ifElse', label: 'If-Else', category: 'Control Flow' },
+  { type: 'stringOperation', label: 'String Operation', category: 'String Operations' },
+  { type: 'display', label: 'Print', category: 'Output' },
+];
+
 export function Sidebar({ onDragStart, onExport, onImport }: SidebarProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredNodes = NODE_ITEMS.filter(node => 
+    node.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    node.category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const groupedNodes = filteredNodes.reduce((acc, node) => {
+    if (!acc[node.category]) {
+      acc[node.category] = [];
+    }
+    acc[node.category].push(node);
+    return acc;
+  }, {} as Record<string, NodeItem[]>);
+
   return (
     <div className="w-64 bg-slate-100 p-4 border-r border-slate-200">
       {/* Export/Import buttons at top */}
@@ -33,129 +71,38 @@ export function Sidebar({ onDragStart, onExport, onImport }: SidebarProps) {
         </button>
       </div>
 
+      {/* Search input */}
+      <div className="relative mb-4">
+        <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500" />
+        <Input
+          type="text"
+          placeholder="Search nodes..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-8 w-full"
+        />
+      </div>
+
       {/* Node sections in single column */}
       <div className="text-sm font-semibold mb-4">Nodes</div>
       <div className="flex flex-col gap-4">
-        <CollapsibleSection title="Input">
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'numberInput')}
-            >
-              Number Input
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'stringInput')}
-            >
-              String Input
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'booleanInput')}
-            >
-              Boolean Input
-            </Button>
-          </div>
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Basic Operations">
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'addition')}
-            >
-              Add
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'subtraction')}
-            >
-              Subtract
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'multiplication')}
-            >
-              Multiply
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'division')}
-            >
-              Divide
-            </Button>
-          </div>
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Control Flow">
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'comparison')}
-            >
-              Compare
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'booleanOperation')}
-            >
-              Boolean Operation
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'ifElse')}
-            >
-              If-Else
-            </Button>
-          </div>
-        </CollapsibleSection>
-
-        <CollapsibleSection title="String Operations">
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'stringOperation')}
-            >
-              String Operation
-            </Button>
-          </div>
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Output">
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              draggable
-              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'display')}
-            >
-              Print
-            </Button>
-          </div>
-        </CollapsibleSection>
+        {Object.entries(groupedNodes).map(([category, nodes]) => (
+          <CollapsibleSection key={category} title={category}>
+            <div className="flex flex-col gap-2">
+              {nodes.map((node) => (
+                <Button
+                  key={node.type}
+                  variant="outline"
+                  className="w-full justify-start"
+                  draggable
+                  onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, node.type)}
+                >
+                  {node.label}
+                </Button>
+              ))}
+            </div>
+          </CollapsibleSection>
+        ))}
       </div>
     </div>
   );
