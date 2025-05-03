@@ -66,6 +66,9 @@ class CodeGenerator {
       case 'booleanOperation':
         baseName = 'bool_result';
         break;
+      case 'stringOperation':
+        baseName = 'str_result';
+        break;
       case 'display':
         this.displayNodes.add(nodeId);
         return ''; // Display nodes don't need variables
@@ -175,6 +178,41 @@ class CodeGenerator {
         const inputs = inputNodes.map(n => this.getVariableName(n.id));
         if (inputs.length < 2) return `${varName} = ${inputs[0] || 0}`;
         return `${varName} = ${inputs[0]} / ${inputs[1]} if ${inputs[1]} != 0 else 0  # Prevent division by zero`;
+      }
+
+      case 'stringOperation': {
+        const inputs = inputNodes.map(n => this.getVariableName(n.id));
+        if (inputs.length === 0) return `${varName} = ""  # Missing inputs`;
+
+        switch (node.data.operator) {
+          case 'CONCAT':
+            if (inputs.length < 2) return `${varName} = ${inputs[0] || '""'}`;
+            return `${varName} = str(${inputs[0]}) + str(${inputs[1]})`;
+          case 'LENGTH':
+            if (!inputs[0]) return `${varName} = 0  # Missing input`;
+            return `${varName} = len(str(${inputs[0]}))`;
+          case 'SUBSTRING':
+            if (!inputs[0]) return `${varName} = ""  # Missing input`;
+            const start = node.data.startIndex ?? 0;
+            const end = node.data.endIndex !== undefined ? node.data.endIndex : 'None';
+            return `${varName} = str(${inputs[0]})[${start}:${end}]`;
+          case 'UPPERCASE':
+            return `${varName} = str(${inputs[0]}).upper()`;
+          case 'LOWERCASE':
+            return `${varName} = str(${inputs[0]}).lower()`;
+          case 'REPLACE':
+            return `${varName} = str(${inputs[0]}).replace(${JSON.stringify(node.data.searchText || '')}, ${JSON.stringify(node.data.replaceText || '')})`;
+          case 'SPLIT':
+            return `${varName} = str(${inputs[0]}).split(${JSON.stringify(node.data.delimiter || '')})`;
+          case 'JOIN':
+            return `${varName} = ${JSON.stringify(node.data.delimiter || '')}.join(${inputs[0]} if isinstance(${inputs[0]}, list) else [${inputs[0]}])`;
+          case 'TRIM':
+            return `${varName} = str(${inputs[0]}).strip()`;
+          case 'CONTAINS':
+            return `${varName} = ${JSON.stringify(node.data.searchText || '')} in str(${inputs[0]})`;
+          default:
+            return `${varName} = ""  # Unknown string operator`;
+        }
       }
       
       default:

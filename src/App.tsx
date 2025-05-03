@@ -23,6 +23,7 @@ import IfElseNode from './components/nodes/IfElseNode';
 import DisplayNode from './components/nodes/DisplayNode';
 import ComparisonNode from './components/nodes/ComparisonNode';
 import BooleanOperationNode from './components/nodes/BooleanOperationNode';
+import StringOperationNode from './components/nodes/StringOperationNode';
 import { useCallback, useState, useEffect } from 'react';
 import { useFlowExportImport } from './hooks/useFlowExportImport';
 import { useNodeOperations } from './hooks/useNodeOperations';
@@ -42,6 +43,7 @@ const nodeTypes: NodeTypes = {
   display: DisplayNode,
   comparison: ComparisonNode,
   booleanOperation: BooleanOperationNode,
+  stringOperation: StringOperationNode,
 };
 
 function App() {
@@ -92,9 +94,11 @@ function App() {
       type,
       position,
       data: { 
-        value: type === 'booleanInput' ? false : type === 'stringInput' ? '' : 0,
-        operator: type === 'comparison' ? '==' : undefined,
-        onChange: type === 'comparison' ? 
+        value: type === 'booleanInput' ? false : type === 'stringInput' ? '' : type === 'stringOperation' ? '' : 0,
+        operator: type === 'comparison' ? '==' : type === 'stringOperation' ? 'CONCAT' : undefined,
+        leftValue: type === 'stringOperation' ? '' : undefined,
+        rightValue: type === 'stringOperation' ? '' : undefined,
+        onChange: (type === 'comparison' || type === 'stringOperation') ? 
           (id: string, value: string | number | boolean) => {
             setNodes(nds => nds.map(node => 
               node.id === id 
@@ -142,8 +146,8 @@ function App() {
             return { ...node, data: { ...node.data, value } };
           }
           
-          // If this is a comparison node, update its input values
-          if (node.type === 'comparison') {
+          // If this is a comparison or string operation node, update its input values
+          if (node.type === 'comparison' || node.type === 'stringOperation') {
             const currentEdges = edges;
             const leftEdge = currentEdges.find(e => e.target === node.id && e.targetHandle === 'left');
             const rightEdge = currentEdges.find(e => e.target === node.id && e.targetHandle === 'right');
@@ -177,7 +181,7 @@ function App() {
     return () => {
       window.removeEventListener('nodeValueChanged', handleNodeValueChanged as EventListener);
     };
-  }, []);  
+  }, [edges]);  
 
   // Update display nodes when their source nodes change
   useEffect(() => {

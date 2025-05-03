@@ -131,6 +131,19 @@ export function Sidebar({ onDragStart, onExport, onImport }: SidebarProps) {
           </div>
         </CollapsibleSection>
 
+        <CollapsibleSection title="String Operations">
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              draggable
+              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'stringOperation')}
+            >
+              String Operation
+            </Button>
+          </div>
+        </CollapsibleSection>
+
         <CollapsibleSection title="Output">
           <div className="flex flex-col gap-2">
             <Button

@@ -62,7 +62,17 @@ The Visual Node Programming Environment (VNPE) is a web-based application that a
 
 ### 3.5 Advanced Features (Future)
 - [x] Comparison nodes (greater than, less than, equal to)
-- [ ] String manipulation nodes
+- **String Manipulation Nodes**
+  - [x] String concatenation (2+ inputs)
+  - [x] String length
+  - [x] Substring (with start and end indices)
+  - [x] String to uppercase
+  - [x] String to lowercase
+  - [x] String replace
+  - [x] String split (into list)
+  - [x] String join (list to string)
+  - [x] String trim (remove whitespace)
+  - [x] String contains/find
 - [x] Boolean operation nodes
 - [x] Conditional nodes (if/else)
 - [x] Export flow file
