@@ -33,6 +33,8 @@ interface NodeData extends Record<string, unknown> {
   value: string | number | boolean;
   operator?: string;
   onChange?: (id: string, value: string | number | boolean) => void;
+  leftValue?: string | number | boolean;
+  rightValue?: string | number | boolean;
 }
 
 const nodeTypes: NodeTypes = {
@@ -71,7 +73,14 @@ function App() {
 
   const onConnect = useCallback((params: Connection) => {
     setEdges((eds) => {
-      const newEdges = addEdge(params, eds);
+      const newEdges = addEdge({
+        ...params,
+        data: {
+          target: params.target,
+          targetHandle: params.targetHandle,
+          value: undefined
+        }
+      }, eds);
       
       // Update target node's value if it's a display node
       setNodes((nds) => {
@@ -96,12 +105,41 @@ function App() {
   useEffect(() => {
     const handleNodeValueChanged = (event: CustomEvent<{ id: string; value: any }>) => {
       const { id, value } = event.detail;
+      
       setNodes(nds => 
-        nds.map(node => 
-          node.id === id 
-            ? { ...node, data: { ...node.data, value } }
-            : node
-        )
+        nds.map(node => {
+          // Update the node that changed
+          if (node.id === id) {
+            return { ...node, data: { ...node.data, value } };
+          }
+          
+          // If this is a comparison node, update its input values
+          if (node.type === 'comparison') {
+            const leftEdge = edges.find(e => e.target === node.id && e.targetHandle === 'left');
+            const rightEdge = edges.find(e => e.target === node.id && e.targetHandle === 'right');
+            
+            if (leftEdge && leftEdge.source === id) {
+              return { 
+                ...node, 
+                data: { 
+                  ...node.data, 
+                  leftValue: value 
+                } 
+              };
+            }
+            if (rightEdge && rightEdge.source === id) {
+              return { 
+                ...node, 
+                data: { 
+                  ...node.data, 
+                  rightValue: value 
+                } 
+              };
+            }
+          }
+          
+          return node;
+        })
       );
     };
 
@@ -109,7 +147,7 @@ function App() {
     return () => {
       window.removeEventListener('nodeValueChanged', handleNodeValueChanged as EventListener);
     };
-  }, []);
+  }, [edges]);
 
   // Update display nodes when their source nodes change
   useEffect(() => {
