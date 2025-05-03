@@ -8,11 +8,13 @@ class CodeGenerator {
   private edges: Edge[];
   private variables: Map<string, string>;
   private indent: string;
+  private displayNodes: Set<string>;
 
   constructor(nodes: NodeWithData[], edges: Edge[]) {
     this.nodes = nodes;
     this.edges = edges;
     this.variables = new Map();
+    this.displayNodes = new Set();
     this.indent = '    '; // 4 spaces for Python indentation
   }
 
@@ -61,6 +63,9 @@ class CodeGenerator {
       case 'comparison':
         baseName = 'result';
         break;
+      case 'display':
+        this.displayNodes.add(nodeId);
+        return ''; // Display nodes don't need variables
       default:
         baseName = 'result';
     }
@@ -71,6 +76,14 @@ class CodeGenerator {
   }
 
   private generateNodeCode(node: NodeWithData): string {
+    if (node.type === 'display') {
+      const inputNodes = this.getInputNodes(node.id);
+      const input = inputNodes[0];
+      if (!input) return `print(None)  # No input connected`;
+      const inputVar = this.getVariableName(input.id);
+      return `print(${inputVar})`;
+    }
+
     const varName = this.getVariableName(node.id);
     const inputNodes = this.getInputNodes(node.id);
     
@@ -132,13 +145,6 @@ class CodeGenerator {
           `${varName} = ${trueVar} if ${conditionVar} else ${falseVar}`
         ].join('\n');
       }
-
-      case 'display': {
-        const input = inputNodes[0];
-        if (!input) return `print(None)  # No input connected`;
-        const inputVar = this.getVariableName(input.id);
-        return `print(${inputVar})`;
-      }
       
       case 'division': {
         const inputs = inputNodes.map(n => this.getVariableName(n.id));
@@ -172,9 +178,9 @@ class CodeGenerator {
       'def calculate():'
     ];
 
-    // Find nodes without outgoing edges (end nodes)
+    // Find all nodes that need processing (end nodes and display nodes)
     const endNodes = this.nodes.filter(node => 
-      !this.edges.some(edge => edge.source === node.id)
+      !this.edges.some(edge => edge.source === node.id) || node.type === 'display'
     );
 
     // Process nodes in dependency order
@@ -198,8 +204,12 @@ class CodeGenerator {
       }
     }
 
-    // Add return statement for end nodes
-    const returnValues = endNodes.map(node => this.getVariableName(node.id));
+    // Add return statement for non-display end nodes
+    const returnValues = endNodes
+      .filter(node => !this.displayNodes.has(node.id))
+      .map(node => this.getVariableName(node.id))
+      .filter(name => name); // Filter out empty names (from display nodes)
+
     if (returnValues.length === 0) {
       lines.push(this.indent + 'return None');
     } else if (returnValues.length === 1) {
@@ -211,8 +221,7 @@ class CodeGenerator {
     // Add main block to execute the function
     lines.push('');
     lines.push('if __name__ == "__main__":');
-    lines.push(this.indent + 'result = calculate()');
-    lines.push(this.indent + 'print(f"Result: {result}")');
+    lines.push(this.indent + 'calculate()');
 
     return lines.join('\n');
   }
