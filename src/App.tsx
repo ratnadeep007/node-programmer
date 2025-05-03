@@ -220,12 +220,14 @@ function App() {
   }, [nodes, edges]);
 
   return (
-    <div className="w-screen h-screen flex">
-      <Sidebar
-        onDragStart={onDragStart}
-        onExport={handleExport}
-        onImport={handleImport}
-      />
+    <div className="w-screen h-screen flex overflow-hidden">
+      <div className="overflow-y-auto">
+        <Sidebar
+          onDragStart={onDragStart}
+          onExport={handleExport}
+          onImport={handleImport}
+        />
+      </div>
 
       <div className="flex-1" onDrop={onDrop} onDragOver={onDragOver}>
         <ReactFlow
