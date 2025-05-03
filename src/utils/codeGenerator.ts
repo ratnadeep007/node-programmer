@@ -1,8 +1,5 @@
 import { Node, Edge } from '@xyflow/react';
-
-type NodeData = {
-  value: number;
-};
+import { NodeData } from '../types';
 
 type NodeWithData = Node<NodeData>;
 
@@ -43,6 +40,12 @@ class CodeGenerator {
       case 'numberInput':
         baseName = 'num';
         break;
+      case 'stringInput':
+        baseName = 'str';
+        break;
+      case 'booleanInput':
+        baseName = 'bool';
+        break;
       case 'addition':
         baseName = 'sum';
         break;
@@ -54,6 +57,9 @@ class CodeGenerator {
         break;
       case 'division':
         baseName = 'quotient';
+        break;
+      case 'comparison':
+        baseName = 'result';
         break;
       default:
         baseName = 'result';
@@ -70,7 +76,19 @@ class CodeGenerator {
     
     switch (node.type) {
       case 'numberInput':
-        return `${varName} = ${node.data.value}`;
+        return `${varName} = ${node.data.value || 0}`;
+      
+      case 'stringInput':
+        return `${varName} = "${node.data.value || ''}"`;
+      
+      case 'booleanInput':
+        return `${varName} = ${node.data.value ? 'True' : 'False'}`;
+      
+      case 'comparison': {
+        const inputs = inputNodes.map(n => this.getVariableName(n.id));
+        if (inputs.length < 2) return `${varName} = False  # Missing inputs`;
+        return `${varName} = ${inputs[0]} ${node.data.operator} ${inputs[1]}`;
+      }
       
       case 'addition': {
         const inputs = inputNodes.map(n => this.getVariableName(n.id));
@@ -86,6 +104,40 @@ class CodeGenerator {
       case 'multiplication': {
         const inputs = inputNodes.map(n => this.getVariableName(n.id));
         return `${varName} = ${inputs.join(' * ')}`;
+      }
+
+      case 'ifElse': {
+        const condition = inputNodes.find(n => 
+          this.edges.find(e => e.target === node.id && e.targetHandle === 'condition')?.source === n.id
+        );
+        const trueBranch = inputNodes.find(n => 
+          this.edges.find(e => e.target === node.id && e.targetHandle === 'true')?.source === n.id
+        );
+        const falseBranch = inputNodes.find(n => 
+          this.edges.find(e => e.target === node.id && e.targetHandle === 'false')?.source === n.id
+        );
+
+        const conditionVar = condition ? this.getVariableName(condition.id) : 'False';
+        const trueVar = trueBranch ? this.getVariableName(trueBranch.id) : 'None';
+        const falseVar = falseBranch ? this.getVariableName(falseBranch.id) : 'None';
+
+        // Add warning comments for missing connections
+        const warnings: string[] = [];
+        if (!condition) warnings.push('# Warning: Missing condition, defaulting to False');
+        if (!trueBranch) warnings.push('# Warning: Missing true branch, defaulting to None');
+        if (!falseBranch) warnings.push('# Warning: Missing false branch, defaulting to None');
+
+        return [
+          ...warnings,
+          `${varName} = ${trueVar} if ${conditionVar} else ${falseVar}`
+        ].join('\n');
+      }
+
+      case 'display': {
+        const input = inputNodes[0];
+        if (!input) return `print(None)  # No input connected`;
+        const inputVar = this.getVariableName(input.id);
+        return `print(${inputVar})`;
       }
       
       case 'division': {

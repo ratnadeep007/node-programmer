@@ -3,10 +3,7 @@ import { useEffect, useState } from 'react';
 import { generatePythonCode } from '../utils/codeGenerator';
 import { Button } from './ui/button';
 import { Copy } from 'lucide-react';
-
-type NodeData = {
-  value: number;
-};
+import { NodeData } from '../types';
 
 interface CodePreviewProps {
   nodes: Node<NodeData>[];
