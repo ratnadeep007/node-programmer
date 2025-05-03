@@ -18,6 +18,7 @@ import { CodePreview } from './components/CodePreview';
 import NumberInputNode from './components/nodes/NumberInputNode';
 import StringInputNode from './components/nodes/StringInputNode';
 import BooleanInputNode from './components/nodes/BooleanInputNode';
+import ListInputNode from './components/nodes/ListInputNode';
 import AdditionNode from './components/nodes/AdditionNode';
 import SubtractionNode from './components/nodes/SubtractionNode';
 import MultiplicationNode from './components/nodes/MultiplicationNode';
@@ -27,6 +28,7 @@ import DisplayNode from './components/nodes/DisplayNode';
 import ComparisonNode from './components/nodes/ComparisonNode';
 import BooleanOperationNode from './components/nodes/BooleanOperationNode';
 import StringOperationNode from './components/nodes/StringOperationNode';
+import ListOperationNode from './components/nodes/ListOperationNode';
 import { useCallback, useState, useEffect } from 'react';
 import { useFlowExportImport } from './hooks/useFlowExportImport';
 import { useNodeOperations } from './hooks/useNodeOperations';
@@ -42,6 +44,7 @@ const nodeTypes: NodeTypes = {
   numberInput: NumberInputNode,
   stringInput: StringInputNode,
   booleanInput: BooleanInputNode,
+  listInput: ListInputNode,
   addition: AdditionNode,
   subtraction: SubtractionNode,
   multiplication: MultiplicationNode,
@@ -51,6 +54,7 @@ const nodeTypes: NodeTypes = {
   comparison: ComparisonNode,
   booleanOperation: BooleanOperationNode,
   stringOperation: StringOperationNode,
+  listOperation: ListOperationNode,
 };
 
 function AppContent() {

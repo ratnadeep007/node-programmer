@@ -20,6 +20,7 @@ const NODE_ITEMS: NodeItem[] = [
   { type: 'numberInput', label: 'Number Input', category: 'Input' },
   { type: 'stringInput', label: 'String Input', category: 'Input' },
   { type: 'booleanInput', label: 'Boolean Input', category: 'Input' },
+  { type: 'listInput', label: 'List Input', category: 'Input' },
   { type: 'addition', label: 'Add', category: 'Basic Operations' },
   { type: 'subtraction', label: 'Subtract', category: 'Basic Operations' },
   { type: 'multiplication', label: 'Multiply', category: 'Basic Operations' },
@@ -28,6 +29,7 @@ const NODE_ITEMS: NodeItem[] = [
   { type: 'booleanOperation', label: 'Boolean Operation', category: 'Control Flow' },
   { type: 'ifElse', label: 'If-Else', category: 'Control Flow' },
   { type: 'stringOperation', label: 'String Operation', category: 'String Operations' },
+  { type: 'listOperation', label: 'List Operation', category: 'List Operations' },
   { type: 'display', label: 'Print', category: 'Output' },
 ];
 
