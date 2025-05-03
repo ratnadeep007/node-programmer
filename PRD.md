@@ -14,9 +14,11 @@ The Visual Node Programming Environment (VNPE) is a web-based application that a
 ### 3.1 Node System
 - **Input Nodes**
   - [x] Number input node with configurable value
-  - [ ] String input node for text values
-  - [ ] Boolean input node for true/false values
+  - [x] String input node for text values
+  - [x] Boolean input node for true/false values
   - [ ] Variable input node for reusable values
+  - [ ] List input node for array values
+  - [ ] Dictionary input node for object values
 
 - **Arithmetic Operation Nodes**
   - [x] Addition node (2+ inputs, 1 output)
@@ -27,6 +29,12 @@ The Visual Node Programming Environment (VNPE) is a web-based application that a
 - **Output Node**
   - [x] Result display node
   - [x] Python code generation
+
+- **Built in functions Node**
+  - [ ] Sum of list
+  - [ ] Maximum of list
+  - [ ] Minimum of list
+  - [ ] Length of list
 
 ### 3.2 Node Interface
 - [x] Drag-and-drop node creation
@@ -50,12 +58,15 @@ The Visual Node Programming Environment (VNPE) is a web-based application that a
 - [ ] Search functionality for nodes
 - [ ] Node copy/paste functionality
 - [ ] Undo/redo operations
-- [ ] Save/load node configurations
+- [x] Save/load node configurations
 
 ### 3.5 Advanced Features (Future)
+- [x] Comparison nodes (greater than, less than, equal to)
 - [ ] String manipulation nodes
-- [ ] Boolean operation nodes
+- [x] Boolean operation nodes
 - [x] Conditional nodes (if/else)
+- [x] Export flow file
+- [x] Import flow file 
 - [ ] Loop nodes (for/while)
 - [ ] Function definition nodes
 - [ ] Export to standalone Python file

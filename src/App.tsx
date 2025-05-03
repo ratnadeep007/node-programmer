@@ -22,6 +22,7 @@ import DivisionNode from './components/nodes/DivisionNode';
 import IfElseNode from './components/nodes/IfElseNode';
 import DisplayNode from './components/nodes/DisplayNode';
 import ComparisonNode from './components/nodes/ComparisonNode';
+import BooleanOperationNode from './components/nodes/BooleanOperationNode';
 import { useCallback, useState, useEffect } from 'react';
 import { useFlowExportImport } from './hooks/useFlowExportImport';
 import { useNodeOperations } from './hooks/useNodeOperations';
@@ -40,6 +41,7 @@ const nodeTypes: NodeTypes = {
   ifElse: IfElseNode,
   display: DisplayNode,
   comparison: ComparisonNode,
+  booleanOperation: BooleanOperationNode,
 };
 
 function App() {

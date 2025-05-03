@@ -63,6 +63,9 @@ class CodeGenerator {
       case 'comparison':
         baseName = 'result';
         break;
+      case 'booleanOperation':
+        baseName = 'bool_result';
+        break;
       case 'display':
         this.displayNodes.add(nodeId);
         return ''; // Display nodes don't need variables
@@ -101,6 +104,28 @@ class CodeGenerator {
         const inputs = inputNodes.map(n => this.getVariableName(n.id));
         if (inputs.length < 2) return `${varName} = False  # Missing inputs`;
         return `${varName} = ${inputs[0]} ${node.data.operator} ${inputs[1]}`;
+      }
+      
+      case 'booleanOperation': {
+        const inputs = inputNodes.map(n => this.getVariableName(n.id));
+        if (inputs.length === 0) return `${varName} = False  # Missing inputs`;
+        
+        switch (node.data.operator) {
+          case 'NOT':
+            return `${varName} = not ${inputs[0]}`;
+          case 'AND':
+            return `${varName} = ${inputs[0]} and ${inputs[1]}`;
+          case 'OR':
+            return `${varName} = ${inputs[0]} or ${inputs[1]}`;
+          case 'XOR':
+            return `${varName} = bool(${inputs[0]}) != bool(${inputs[1]})`;
+          case 'NAND':
+            return `${varName} = not (${inputs[0]} and ${inputs[1]})`;
+          case 'NOR':
+            return `${varName} = not (${inputs[0]} or ${inputs[1]})`;
+          default:
+            return `${varName} = False  # Unknown operator`;
+        }
       }
       
       case 'addition': {

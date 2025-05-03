@@ -6,6 +6,17 @@ import { NodeData } from '../../types';
 type BooleanInputNodeProps = Pick<Node<NodeData>, 'id' | 'data'>;
 
 export default function BooleanInputNode({ data, id }: BooleanInputNodeProps) {
+  const handleValueChange = (checked: boolean) => {
+    // Update the node's data
+    data.value = checked;
+    
+    // Emit value change event
+    const event = new CustomEvent('nodeValueChanged', {
+      detail: { id, value: checked }
+    });
+    window.dispatchEvent(event);
+  };
+
   return (
     <div className="px-4 py-2 shadow-md rounded-md bg-white border-2 border-stone-400">
       <Handle type="source" position={Position.Right} />
@@ -14,7 +25,7 @@ export default function BooleanInputNode({ data, id }: BooleanInputNodeProps) {
         <Switch
           id={id}
           checked={data.value as boolean}
-          onCheckedChange={(checked) => data.onChange?.(id, checked)}
+          onCheckedChange={handleValueChange}
           className="nodrag"
         />
       </div>

@@ -116,6 +116,14 @@ export function Sidebar({ onDragStart, onExport, onImport }: SidebarProps) {
               variant="outline"
               className="w-full justify-start"
               draggable
+              onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'booleanOperation')}
+            >
+              Boolean Operation
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              draggable
               onDragStart={(e: DragEvent<HTMLButtonElement>) => onDragStart(e, 'ifElse')}
             >
               If-Else

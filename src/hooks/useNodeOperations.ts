@@ -80,6 +80,27 @@ export function useNodeOperations(
           });
         }
 
+        // Handle Boolean operation node inputs
+        if (targetNode.type === 'booleanOperation') {
+          return nds.map(node => {
+            if (node.id === targetNode.id) {
+              const updatedData = { ...node.data };
+              
+              switch (params.targetHandle) {
+                case 'left':
+                  updatedData.leftValue = Boolean(sourceNode.data.value);
+                  break;
+                case 'right':
+                  updatedData.rightValue = Boolean(sourceNode.data.value);
+                  break;
+              }
+              
+              return { ...node, data: updatedData };
+            }
+            return node;
+          });
+        }
+
         return nds;
       });
       
@@ -127,6 +148,19 @@ export function useNodeOperations(
                     break;
                   case 'right':
                     updatedData.rightValue = value;
+                    break;
+                }
+                return { ...node, data: updatedData };
+              }
+              
+              if (node.type === 'booleanOperation') {
+                const updatedData = { ...node.data };
+                switch (edge.targetHandle) {
+                  case 'left':
+                    updatedData.leftValue = Boolean(value);
+                    break;
+                  case 'right':
+                    updatedData.rightValue = Boolean(value);
                     break;
                 }
                 return { ...node, data: updatedData };
