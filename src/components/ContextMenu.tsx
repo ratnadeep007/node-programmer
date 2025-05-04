@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface NodeType {
   type: string;
@@ -26,7 +26,7 @@ interface ContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
-  onAddNode: (type: string, position: { x: number, y: number }) => void;
+  onAddNode: (type: string, position: { flowPosition: { x: number, y: number } }) => void;
 }
 
 export function ContextMenu({ x, y, onClose, onAddNode }: ContextMenuProps) {
@@ -61,7 +61,7 @@ export function ContextMenu({ x, y, onClose, onAddNode }: ContextMenuProps) {
       case 'Enter':
         e.preventDefault();
         if (filteredNodes[selectedIndex]) {
-          onAddNode(filteredNodes[selectedIndex].type, { x, y });
+          onAddNode(filteredNodes[selectedIndex].type, { flowPosition: { x, y } });
           onClose();
         }
         break;
@@ -76,6 +76,11 @@ export function ContextMenu({ x, y, onClose, onAddNode }: ContextMenuProps) {
     <div 
       className="absolute bg-white shadow-lg rounded-md py-2 border border-gray-200 min-w-[200px] z-50 context-menu"
       style={{ left: x, top: y }}
+      onClick={(e) => e.stopPropagation()}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
     >
       <div className="px-2 mb-2">
         <input
@@ -96,7 +101,7 @@ export function ContextMenu({ x, y, onClose, onAddNode }: ContextMenuProps) {
               index === selectedIndex ? 'bg-gray-100' : ''
             }`}
             onClick={() => {
-              onAddNode(node.type, { x, y });
+              onAddNode(node.type, { flowPosition: { x, y } });
               onClose();
             }}
           >
