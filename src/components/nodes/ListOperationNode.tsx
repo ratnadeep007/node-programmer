@@ -14,6 +14,11 @@ import { NodeData } from '@/types';
 interface ListNodeData extends Omit<NodeData, 'value'> {
   value?: string;
   operator?: string;
+  listOperation?: string;
+  filterCondition?: string;
+  mapFunction?: string;
+  joinDelimiter?: string;
+  sliceRange?: string;
 }
 
 type ListOperationNodeProps = Pick<Node<ListNodeData>, 'id' | 'data'>;
@@ -31,14 +36,14 @@ const LIST_OPERATIONS = {
 } as const;
 
 export default function ListOperationNode({ id, data }: ListOperationNodeProps) {
-  const [operator, setOperator] = useState('PUSH');
-  const [condition, setCondition] = useState('x > 0');
-  const [mapFunction, setMapFunction] = useState('x * 2');
+  const [operator, setOperator] = useState(data.listOperation as string || 'PUSH');
+  const [condition, setCondition] = useState(data.filterCondition as string || 'x > 0');
+  const [mapFunction, setMapFunction] = useState(data.mapFunction as string || 'x * 2');
   const [inputArray, setInputArray] = useState<any[]>([]);
   const [outputArray, setOutputArray] = useState<any[]>([]);
   const [pushValue, setPushValue] = useState<any>(null);
-  const [joinDelimiter, setJoinDelimiter] = useState(',');
-  const [sliceRange, setSliceRange] = useState('');
+  const [joinDelimiter, setJoinDelimiter] = useState(data.joinDelimiter as string || ',');
+  const [sliceRange, setSliceRange] = useState(data.sliceRange as string || '');
 
   const processArray = useCallback(() => {
     console.log(`ListOperationNode ${id} processArray called:`, {
@@ -217,11 +222,14 @@ export default function ListOperationNode({ id, data }: ListOperationNodeProps) 
 
   const handleOperatorChange = (newOperator: string) => {
     setOperator(newOperator);
+    data.listOperation = newOperator;
     processArray();
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (value: string) => void) => {
-    setter(e.target.value);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (value: string) => void, dataKey: string) => {
+    const newValue = e.target.value;
+    setter(newValue);
+    (data as any)[dataKey] = newValue;
     processArray();
   };
 
@@ -272,7 +280,7 @@ export default function ListOperationNode({ id, data }: ListOperationNodeProps) 
           <Input
             placeholder="Map function (e.g. x * 2)"
             value={mapFunction}
-            onChange={(e) => handleInputChange(e, setMapFunction)}
+            onChange={(e) => handleInputChange(e, setMapFunction, 'mapFunction')}
           />
         )}
 
@@ -280,7 +288,7 @@ export default function ListOperationNode({ id, data }: ListOperationNodeProps) 
           <Input
             placeholder="Filter condition (e.g. x > 0)"
             value={condition}
-            onChange={(e) => handleInputChange(e, setCondition)}
+            onChange={(e) => handleInputChange(e, setCondition, 'filterCondition')}
           />
         )}
 
@@ -288,7 +296,7 @@ export default function ListOperationNode({ id, data }: ListOperationNodeProps) 
           <Input
             placeholder="Join delimiter"
             value={joinDelimiter}
-            onChange={(e) => handleInputChange(e, setJoinDelimiter)}
+            onChange={(e) => handleInputChange(e, setJoinDelimiter, 'joinDelimiter')}
           />
         )}
 
@@ -296,7 +304,7 @@ export default function ListOperationNode({ id, data }: ListOperationNodeProps) 
           <Input
             placeholder="start, end (e.g. 0, 2)"
             value={sliceRange}
-            onChange={(e) => handleInputChange(e, setSliceRange)}
+            onChange={(e) => handleInputChange(e, setSliceRange, 'sliceRange')}
           />
         )}
 

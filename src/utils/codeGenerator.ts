@@ -78,6 +78,12 @@ class CodeGenerator {
       case 'stringOperation':
         baseName = 'str_result';
         break;
+      case 'listInput':
+        baseName = 'list';
+        break;
+      case 'listOperation':
+        baseName = 'list_result';
+        break;
       case 'display':
         this.displayNodes.add(nodeId);
         return ''; // Display nodes don't need variables
@@ -112,6 +118,19 @@ class CodeGenerator {
       case 'booleanInput':
         return `${varName} = ${node.data.value ? 'True' : 'False'}`;
       
+      case 'listInput': {
+        let listValue;
+        try {
+          listValue = JSON.parse(node.data.value as string || '[]');
+        } catch {
+          listValue = [];
+        }
+        const formattedList = listValue.map((item: any) => 
+          typeof item === 'string' ? `"${item}"` : item
+        ).join(', ');
+        return `${varName} = [${formattedList}]`;
+      }
+
       case 'comparison': {
         const inputs = inputNodes.map(n => this.getVariableName(n.id));
         if (inputs.length < 2) return `${varName} = False  # Missing inputs`;
@@ -189,6 +208,50 @@ class CodeGenerator {
         return `${varName} = ${inputs[0]} / ${inputs[1]} if ${inputs[1]} != 0 else 0  # Prevent division by zero`;
       }
 
+      case 'listOperation': {
+        const inputs = inputNodes.map(n => this.getVariableName(n.id));
+        if (inputs.length === 0) return `${varName} = []  # Missing inputs`;
+
+        switch (node.data.listOperation) {
+          case 'PUSH': {
+            if (inputs.length < 2) return `${varName} = ${inputs[0]}  # Missing push value`;
+            return `${varName} = ${inputs[0]} + [${inputs[1]}]`;
+          }
+          case 'POP': {
+            return `${varName} = ${inputs[0]}[:-1]  # Remove last element`;
+          }
+          case 'MAP': {
+            const mapFunc = node.data.mapFunction || 'x * 2';
+            return `${varName} = [${mapFunc} for x in ${inputs[0]}]`;
+          }
+          case 'FILTER': {
+            const filterFunc = node.data.filterCondition || 'x > 0';
+            return `${varName} = [x for x in ${inputs[0]} if ${filterFunc}]`;
+          }
+          case 'LENGTH': {
+            return `${varName} = len(${inputs[0]})`;
+          }
+          case 'JOIN': {
+            const delimiter = JSON.stringify(node.data.joinDelimiter || ',');
+            return `${varName} = ${delimiter}.join(map(str, ${inputs[0]}))`;
+          }
+          case 'SLICE': {
+            let [start, end] = (node.data.sliceRange || '').split(',').map(s => s.trim());
+            if (!start) start = '0';
+            if (!end) end = 'None';
+            return `${varName} = ${inputs[0]}[${start}:${end}]`;
+          }
+          case 'REVERSE': {
+            return `${varName} = list(reversed(${inputs[0]}))`;
+          }
+          case 'SORT': {
+            return `${varName} = sorted(${inputs[0]})`;
+          }
+          default:
+            return `${varName} = []  # Unknown list operation`;
+        }
+      }
+
       case 'stringOperation': {
         const inputs = inputNodes.map(n => this.getVariableName(n.id));
         if (inputs.length === 0) return `${varName} = ""  # Missing inputs`;
@@ -247,6 +310,7 @@ class CodeGenerator {
   generateCode(): string {
     const lines: string[] = [
       '# Generated Python code',
+      'import functools',
       'def calculate():'
     ];
 
