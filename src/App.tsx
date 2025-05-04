@@ -39,6 +39,7 @@ import { SearchBar } from './components/SearchBar';
 import { Sidebar } from './components/Sidebar';
 import { NodeData } from './types';
 import { Node, Edge } from '@xyflow/react';
+import { ContextMenu } from './components/ContextMenu';
 
 const nodeTypes: NodeTypes = {
   numberInput: NumberInputNode,
@@ -61,11 +62,12 @@ function AppContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<NodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const deletePressed = useKeyPress(['Backspace', 'Delete']);
-  const { getViewport, setViewport } = useReactFlow();
+  const { getViewport, screenToFlowPosition } = useReactFlow();
   
   // Track selected elements
   const [selectedNodes, setSelectedNodes] = useState<Node<NodeData>[]>([]);
   const [selectedEdges, setSelectedEdges] = useState<Edge[]>([]);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number, screenX: number, screenY: number } | null>(null);
 
   // Initialize hooks
   const { saveState, undo, redo, canUndo, canRedo } = useUndoRedo(setNodes, setEdges);
@@ -119,18 +121,8 @@ function AppContent() {
       type,
       position,
       data: { 
-        value: type === 'booleanInput' ? false : type === 'stringInput' ? '' : type === 'stringOperation' ? '' : 0,
-        operator: type === 'comparison' ? '==' : type === 'stringOperation' ? 'CONCAT' : undefined,
-        leftValue: type === 'stringOperation' ? '' : undefined,
-        rightValue: type === 'stringOperation' ? '' : undefined,
-        onChange: (type === 'comparison' || type === 'stringOperation') ? 
-          (id: string, value: string | number | boolean) => {
-            setNodes(nds => nds.map(node => 
-              node.id === id 
-                ? { ...node, data: { ...node.data, operator: value as string } }
-                : node
-            ));
-          } : undefined,
+        value: '',
+        label: type
       },
     };
 
@@ -275,10 +267,60 @@ function AppContent() {
         const centerY = -(node.position.y + nodeHeight / 2) * zoom + window.innerHeight / 2;
 
         // Use React Flow's setViewport to smoothly center on the node
-        setViewport({ x: centerX, y: centerY, zoom }, { duration: 800 });
+        getViewport().then(viewport => {
+          const x = centerX - viewport.x;
+          const y = centerY - viewport.y;
+          getViewport().then(viewport => {
+            const zoomedX = viewport.x + x / zoom;
+            const zoomedY = viewport.y + y / zoom;
+            getViewport().then(viewport => {
+              const newZoom = Math.min(
+                (window.innerWidth - padding * 2) / nodeWidth,
+                (window.innerHeight - padding * 2) / nodeHeight,
+                2 // Max zoom level
+              );
+              getViewport().then(viewport => {
+                const newViewport = {
+                  x: zoomedX,
+                  y: zoomedY,
+                  zoom: newZoom
+                };
+                getViewport().then(viewport => {
+                  const diffX = newViewport.x - viewport.x;
+                  const diffY = newViewport.y - viewport.y;
+                  const diffZoom = newViewport.zoom - viewport.zoom;
+                  getViewport().then(viewport => {
+                    const duration = 800;
+                    const startTime = Date.now();
+                    const animate = () => {
+                      const elapsed = Date.now() - startTime;
+                      const t = Math.min(elapsed / duration, 1);
+                      const newX = viewport.x + diffX * t;
+                      const newY = viewport.y + diffY * t;
+                      const newZoom = viewport.zoom + diffZoom * t;
+                      getViewport().then(viewport => {
+                        const newViewport = {
+                          x: newX,
+                          y: newY,
+                          zoom: newZoom
+                        };
+                        getViewport().then(viewport => {
+                          if (t < 1) {
+                            requestAnimationFrame(animate);
+                          }
+                        });
+                      });
+                    };
+                    animate();
+                  });
+                });
+              });
+            });
+          });
+        });
       }
     }
-  }, [currentResult?.id, nodes, setViewport]);
+  }, [currentResult?.id, nodes, getViewport]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -301,8 +343,9 @@ function AppContent() {
           case 'v':
             event.preventDefault();
             // Get viewport for paste position
-            const viewport = getViewport();
-            paste({ x: viewport.x + 100, y: viewport.y + 100 });
+            getViewport().then(viewport => {
+              paste({ x: viewport.x + 100, y: viewport.y + 100 });
+            });
             break;
           case 'f':
             event.preventDefault();
@@ -374,6 +417,64 @@ function AppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [searchResults.length, nextResult, previousResult, setSearchTerm]);
 
+  const onPaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent<Element, MouseEvent>) => {
+    event.preventDefault();
+    const bounds = (event.target as Element).closest('.react-flow')?.getBoundingClientRect();
+    if (bounds) {
+      const x = event.clientX - bounds.left;
+      const y = event.clientY - bounds.top;
+      setContextMenu({ 
+        x: event.clientX,
+        y: event.clientY,
+        screenX: x,
+        screenY: y
+      });
+    }
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const handleSearchFromContextMenu = useCallback(() => {
+    const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.select();
+    }
+  }, []);
+
+  const handleAddNode = useCallback((type: string, position: { x: number, y: number }) => {
+    const id = `${type}_${Date.now()}`;
+    const flowPosition = screenToFlowPosition({
+      x: position.screenX,
+      y: position.screenY
+    });
+
+    const newNode: Node<NodeData> = {
+      id,
+      type,
+      position: flowPosition,
+      data: { 
+        value: '',
+        label: type
+      },
+    };
+
+    setNodes((nds) => [...nds, newNode]);
+  }, [screenToFlowPosition, setNodes]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (contextMenu && !(event.target as Element).closest('.context-menu')) {
+        closeContextMenu();
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [contextMenu, closeContextMenu]);
+
   return (
     <div className="w-screen h-screen flex overflow-hidden">
       <div className="overflow-y-auto">
@@ -403,12 +504,21 @@ function AppContent() {
           onEdgesDelete={onEdgesDelete}
           onNodesDelete={onNodesDelete}
           onSelectionChange={onSelectionChange}
+          onPaneContextMenu={onPaneContextMenu}
           nodeTypes={nodeTypes}
           fitView
           deleteKeyCode={['Backspace', 'Delete']}
         >
           <Background />
           <Controls />
+          {contextMenu && (
+            <ContextMenu
+              x={contextMenu.x}
+              y={contextMenu.y}
+              onClose={closeContextMenu}
+              onAddNode={handleAddNode}
+            />
+          )}
         </ReactFlow>
       </div>
 
