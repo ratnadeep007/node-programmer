@@ -1,18 +1,37 @@
 import { Handle, Position } from '@xyflow/react';
 import { Input } from '@/components/ui/input';
-import { useState } from 'react';
-import { NodeData } from '@/types';
-import type { Node } from '@xyflow/react';
 import { Button } from '@/components/ui/button';
+import type { Node } from '@xyflow/react';
+import { NodeData } from '@/types';
+import { useState } from 'react';
+import { cn } from '@/lib/utils';
 
 type ListInputNodeProps = Pick<Node<NodeData>, 'id' | 'data'>;
 
 export default function ListInputNode({ id, data }: ListInputNodeProps) {
-  const [currentArray, setCurrentArray] = useState<any[]>([]);
+  const [currentArray, setCurrentArray] = useState<any[]>(
+    data.value ? JSON.parse(data.value as string) : []
+  );
   const [inputValue, setInputValue] = useState('');
+  const [name, setName] = useState(data.name || '');
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    setName(newName);
+    data.name = newName;
+  };
+
+  const handleNameBlur = () => {
+    setIsEditing(false);
+  };
+
+  const handleNameClick = () => {
+    setIsEditing(true);
   };
 
   const addToArray = () => {
@@ -58,18 +77,39 @@ export default function ListInputNode({ id, data }: ListInputNodeProps) {
   };
 
   return (
-    <div className="px-4 py-2 shadow-md rounded-md bg-white border-2 border-stone-400">
+    <div className="bg-background border-2 rounded-lg p-3 min-w-[200px]">
       <div className="flex flex-col gap-2">
-        <label htmlFor={id} className="text-xs font-bold">List Input:</label>
-        <div className="text-xs">Current: {JSON.stringify(currentArray)}</div>
+        {isEditing ? (
+          <Input
+            type="text"
+            value={name}
+            onChange={handleNameChange}
+            onBlur={handleNameBlur}
+            placeholder="Variable name"
+            className="w-full text-xs"
+            maxLength={50}
+            autoFocus
+          />
+        ) : (
+          <div 
+            onClick={handleNameClick}
+            className={cn(
+              "text-sm font-medium cursor-text rounded",
+              "hover:bg-accent hover:text-accent-foreground",
+              "transition-colors"
+            )}
+          >
+            {name || "List Input"}
+          </div>
+        )}
+        <div className="text-xs font-medium">Current: {JSON.stringify(currentArray)}</div>
         <div className="flex gap-2">
           <Input
-            id={id}
             type="text"
             placeholder="Enter a value"
             value={inputValue}
             onChange={handleInputChange}
-            className="nodrag"
+            className="nodrag text-sm"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && inputValue) {
                 addToArray();
@@ -106,12 +146,13 @@ export default function ListInputNode({ id, data }: ListInputNodeProps) {
             Clear
           </Button>
         </div>
-        <Handle
-          type="source"
-          position={Position.Right}
-          className="!bg-yellow-400"
-        />
       </div>
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="w-2 h-2 bg-foreground"
+        id="list"
+      />
     </div>
   );
 }

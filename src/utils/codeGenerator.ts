@@ -37,6 +37,15 @@ class CodeGenerator {
     const node = this.getNodeById(nodeId);
     if (!node) return 'undefined';
 
+    // Use custom name if provided for input nodes
+    if (node?.type?.endsWith('Input') && node.data.name) {
+      const customName = node.data.name.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+      if (customName) {
+        this.variables.set(nodeId, customName);
+        return customName;
+      }
+    }
+
     let baseName = '';
     switch (node.type) {
       case 'numberInput':
