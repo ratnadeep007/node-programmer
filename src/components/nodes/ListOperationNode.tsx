@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { NodeData } from '@/types';
 
 interface ListNodeData extends Omit<NodeData, 'value'> {
@@ -32,65 +32,102 @@ const LIST_OPERATIONS = {
 
 export default function ListOperationNode({ id, data }: ListOperationNodeProps) {
   const [operator, setOperator] = useState('PUSH');
-  const [inputValue, setInputValue] = useState('');
   const [condition, setCondition] = useState('x > 0');
   const [mapFunction, setMapFunction] = useState('x * 2');
-  
-  const value = data.value ?? '[]';
+  const [inputArray, setInputArray] = useState<any[]>([]);
+  const [outputArray, setOutputArray] = useState<any[]>([]);
+  const [pushValue, setPushValue] = useState<any>(null);
+  const [joinDelimiter, setJoinDelimiter] = useState(',');
+  const [sliceRange, setSliceRange] = useState('');
 
-  const processArray = () => {
+  const processArray = useCallback(() => {
+    console.log(`ListOperationNode ${id} processArray called:`, {
+      operator,
+      inputArray,
+      pushValue,
+      condition,
+      mapFunction,
+      joinDelimiter,
+      sliceRange
+    });
+    
     try {
-      const inputArray = JSON.parse(value);
-      if (!Array.isArray(inputArray)) {
-        throw new Error('Input is not an array');
-      }
-
       let result: any[] = [];
+      
+      // Debug inputArray
+      console.log(`ListOperationNode ${id} processArray inputArray:`, 
+        { type: typeof inputArray, isArray: Array.isArray(inputArray), value: inputArray });
+      
+      // Ensure inputArray is actually an array
+      let workingArray = inputArray;
+      if (!Array.isArray(workingArray)) {
+        console.log(`ListOperationNode ${id} converting non-array to array:`, workingArray);
+        workingArray = workingArray ? [workingArray] : [];
+      }
+      
       switch (operator) {
         case 'PUSH':
-          // Convert input to number if possible
-          const pushValue = !isNaN(Number(inputValue)) ? Number(inputValue) : inputValue;
-          result = [...inputArray, pushValue];
+          // Use pushValue from the input node if available
+          const valueToAdd = pushValue !== null ? pushValue : null;
+          console.log(`ListOperationNode ${id} PUSH operation:`, { valueToAdd, workingArray });
+          if (valueToAdd !== null) {
+            result = [...workingArray, valueToAdd];
+          } else {
+            result = [...workingArray];
+          }
           break;
         case 'POP':
-          result = inputArray.slice(0, -1);
+          console.log(`ListOperationNode ${id} POP operation:`, { workingArray });
+          result = workingArray.slice(0, -1);
           break;
         case 'MAP':
-          result = inputArray.map(x => {
+          console.log(`ListOperationNode ${id} MAP operation:`, { workingArray, mapFunction });
+          result = workingArray.map(x => {
             try {
               const fn = new Function('x', `return ${mapFunction}`);
               return fn(x);
-            } catch {
+            } catch (err) {
+              console.error(`ListOperationNode ${id} MAP error:`, err);
               return x;
             }
           });
           break;
         case 'FILTER':
-          result = inputArray.filter(x => {
+          console.log(`ListOperationNode ${id} FILTER operation:`, { workingArray, condition });
+          result = workingArray.filter(x => {
             try {
               const fn = new Function('x', `return ${condition}`);
               return Boolean(fn(x));
-            } catch {
+            } catch (err) {
+              console.error(`ListOperationNode ${id} FILTER error:`, err);
               return true;
             }
           });
           break;
         case 'LENGTH':
-          result = [inputArray.length];
+          console.log(`ListOperationNode ${id} LENGTH operation:`, { workingArray });
+          result = [workingArray.length];
           break;
         case 'JOIN':
+          console.log(`ListOperationNode ${id} JOIN operation:`, { workingArray, joinDelimiter });
           // Convert all items to strings before joining
-          result = [inputArray.map(x => String(x)).join(inputValue || ',')];
+          result = [workingArray.map(x => String(x)).join(joinDelimiter)];
           break;
         case 'SLICE':
-          const [start = 0, end = inputArray.length] = (inputValue || '').split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
-          result = inputArray.slice(start, end);
+          console.log(`ListOperationNode ${id} SLICE operation:`, { workingArray, sliceRange });
+          const [start = 0, end = workingArray.length] = sliceRange
+            .split(',')
+            .map(x => parseInt(x.trim()))
+            .filter(x => !isNaN(x));
+          result = workingArray.slice(start, end);
           break;
         case 'REVERSE':
-          result = [...inputArray].reverse();
+          console.log(`ListOperationNode ${id} REVERSE operation:`, { workingArray });
+          result = [...workingArray].reverse();
           break;
         case 'SORT':
-          result = [...inputArray].sort((a, b) => {
+          console.log(`ListOperationNode ${id} SORT operation:`, { workingArray });
+          result = [...workingArray].sort((a, b) => {
             if (typeof a === 'number' && typeof b === 'number') {
               return a - b;
             }
@@ -99,35 +136,84 @@ export default function ListOperationNode({ id, data }: ListOperationNodeProps) 
           break;
       }
 
+      console.log(`ListOperationNode ${id} operation result:`, result);
+      setOutputArray(result);
       const resultStr = JSON.stringify(result);
+      data.value = resultStr;
+      console.log(`ListOperationNode ${id} emitting result:`, resultStr);
       const event = new CustomEvent('nodeValueChanged', {
         detail: { id, value: resultStr }
       });
       window.dispatchEvent(event);
     } catch (error) {
-      console.error('Error processing array operation:', error);
+      console.error(`ListOperationNode ${id} processing error:`, error);
+      setOutputArray([]);
       // Emit empty array on error
       const event = new CustomEvent('nodeValueChanged', {
         detail: { id, value: '[]' }
       });
       window.dispatchEvent(event);
     }
-  };
+  }, [id, operator, condition, mapFunction, inputArray, pushValue, joinDelimiter, sliceRange]);
 
   // Listen for value changes from input nodes
   useEffect(() => {
     const handleValueChange = (e: Event) => {
       const detail = (e as CustomEvent).detail;
+      console.log(`ListOperationNode ${id} received event:`, detail);
+      
+      // Skip events from this node
       if (detail && detail.id !== id) {
-        processArray();
+        try {
+          // Check if this node is the target
+          if (detail.target === id) {
+            // Handle different target handles
+            if (detail.targetHandle === 'push-value') {
+              console.log(`ListOperationNode ${id} received push value:`, detail.value);
+              setPushValue(detail.value);
+              if (operator === 'PUSH') {
+                processArray();
+              }
+            } else if (detail.targetHandle === 'target') {
+              console.log(`ListOperationNode ${id} received input array:`, detail.value);
+              try {
+                const newInputArray = JSON.parse(detail.value);
+                console.log(`ListOperationNode ${id} parsed array:`, newInputArray);
+                setInputArray(newInputArray);
+              } catch (error) {
+                console.error(`ListOperationNode ${id} parsing error:`, error);
+                // If parsing fails, try as a single value
+                setInputArray([detail.value]);
+              }
+              // Process array when input changes
+              processArray();
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing input:', error);
+          if (detail.targetHandle === 'push-value') {
+            setPushValue(null);
+          } else {
+            setInputArray([]);
+          }
+          // Process array even on error to ensure output is updated
+          processArray();
+        }
       }
     };
 
+    console.log(`ListOperationNode ${id} adding nodeValueChanged listener`);
     window.addEventListener('nodeValueChanged', handleValueChange);
     return () => {
+      console.log(`ListOperationNode ${id} removing nodeValueChanged listener`);
       window.removeEventListener('nodeValueChanged', handleValueChange);
     };
-  }, [id]);
+  }, [id, operator, processArray]);
+
+  // Process array whenever operator or inputs change
+  useEffect(() => {
+    processArray();
+  }, [operator, processArray]);
 
   const handleOperatorChange = (newOperator: string) => {
     setOperator(newOperator);
@@ -140,20 +226,34 @@ export default function ListOperationNode({ id, data }: ListOperationNodeProps) 
   };
 
   return (
-    <div className="px-4 py-2 shadow-md rounded-md bg-white border-2 border-stone-400">
+    <div className="px-4 py-2 shadow-md rounded-md bg-white border-2 border-stone-400 relative">
       <div className="flex flex-col gap-3">
         <div className="text-xs font-bold">List Operation</div>
-        
+
         {/* Input array */}
-        <div className="flex items-center relative">
-          <span className="text-xs">Input: {value}</span>
+        <div className="flex flex-col gap-1">
+          <div className="text-xs font-medium">Input:</div>
+          <div className="text-xs bg-gray-50 p-2 rounded">
+            {JSON.stringify(inputArray)}
+          </div>
+        </div>
+
+        {/* Input handles */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="target"
+          className="!bg-blue-400"
+        />
+        {operator === 'PUSH' && (
           <Handle
             type="target"
             position={Position.Left}
-            id="target"
-            className="!bg-blue-400 -ml-[1.1rem]"
+            id="push-value"
+            className="!bg-green-400"
+            style={{ top: '60%' }}
           />
-        </div>
+        )}
 
         {/* Operator selector */}
         <Select value={operator} onValueChange={handleOperatorChange}>
@@ -168,14 +268,6 @@ export default function ListOperationNode({ id, data }: ListOperationNodeProps) 
         </Select>
 
         {/* Additional inputs based on operator */}
-        {operator === 'PUSH' && (
-          <Input
-            placeholder="Value to push"
-            value={inputValue}
-            onChange={(e) => handleInputChange(e, setInputValue)}
-          />
-        )}
-
         {operator === 'MAP' && (
           <Input
             placeholder="Map function (e.g. x * 2)"
@@ -195,20 +287,28 @@ export default function ListOperationNode({ id, data }: ListOperationNodeProps) 
         {operator === 'JOIN' && (
           <Input
             placeholder="Join delimiter"
-            value={inputValue}
-            onChange={(e) => handleInputChange(e, setInputValue)}
+            value={joinDelimiter}
+            onChange={(e) => handleInputChange(e, setJoinDelimiter)}
           />
         )}
 
         {operator === 'SLICE' && (
           <Input
             placeholder="start, end (e.g. 0, 2)"
-            value={inputValue}
-            onChange={(e) => handleInputChange(e, setInputValue)}
+            value={sliceRange}
+            onChange={(e) => handleInputChange(e, setSliceRange)}
           />
         )}
 
-        {/* Output */}
+        {/* Output array */}
+        <div className="flex flex-col gap-1">
+          <div className="text-xs font-medium">Output:</div>
+          <div className="text-xs bg-gray-50 p-2 rounded">
+            {JSON.stringify(outputArray)}
+          </div>
+        </div>
+
+        {/* Output handle */}
         <Handle
           type="source"
           position={Position.Right}

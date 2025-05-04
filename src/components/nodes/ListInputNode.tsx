@@ -1,6 +1,5 @@
 import { Handle, Position } from '@xyflow/react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import type { Node } from '@xyflow/react';
 import { NodeData } from '@/types';
 import { useState } from 'react';
@@ -9,15 +8,33 @@ import { cn } from '@/lib/utils';
 type ListInputNodeProps = Pick<Node<NodeData>, 'id' | 'data'>;
 
 export default function ListInputNode({ id, data }: ListInputNodeProps) {
-  const [currentArray, setCurrentArray] = useState<any[]>(
-    data.value ? JSON.parse(data.value as string) : []
-  );
   const [inputValue, setInputValue] = useState('');
   const [name, setName] = useState(data.name || '');
   const [isEditing, setIsEditing] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    
+    try {
+      // Split by comma and parse each value
+      const values = newValue.split(',').map(val => {
+        const trimmed = val.trim();
+        // Try to convert to number if possible
+        return !isNaN(Number(trimmed)) ? Number(trimmed) : trimmed;
+      });
+      
+      // Update node value
+      const arrayString = JSON.stringify(values);
+      data.value = arrayString;
+      console.log(`ListInputNode ${id} emitting value:`, arrayString);
+      const event = new CustomEvent('nodeValueChanged', {
+        detail: { id, value: arrayString }
+      });
+      window.dispatchEvent(event);
+    } catch (error) {
+      console.error('Error parsing list input:', error);
+    }
   };
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,26 +49,6 @@ export default function ListInputNode({ id, data }: ListInputNodeProps) {
 
   const handleNameClick = () => {
     setIsEditing(true);
-  };
-
-  const addToArray = () => {
-    try {
-      // Try to parse as number first
-      const value = !isNaN(Number(inputValue)) ? Number(inputValue) : inputValue;
-      const newArray = [...currentArray, value];
-      setCurrentArray(newArray);
-      setInputValue('');
-      
-      // Update node value
-      const arrayString = JSON.stringify(newArray);
-      data.value = arrayString;
-      const event = new CustomEvent('nodeValueChanged', {
-        detail: { id, value: arrayString }
-      });
-      window.dispatchEvent(event);
-    } catch (error) {
-      console.error('Error adding value to array');
-    }
   };
 
   return (
@@ -80,30 +77,14 @@ export default function ListInputNode({ id, data }: ListInputNodeProps) {
             {name || "List Input"}
           </div>
         )}
-        <div className="text-xs font-medium">Current: {JSON.stringify(currentArray)}</div>
-        <div className="flex gap-2">
-          <Input
-            type="text"
-            placeholder="Enter a value"
-            value={inputValue}
-            onChange={handleInputChange}
-            className="nodrag text-sm"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && inputValue) {
-                addToArray();
-              }
-            }}
-          />
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="nodrag"
-            onClick={addToArray}
-            disabled={!inputValue}
-          >
-            Add
-          </Button>
-        </div>
+        <div className="text-xs font-medium">Current: {data.value || '[]'}</div>
+        <Input
+          type="text"
+          placeholder="Enter comma-separated values (e.g. 1, 2, 3)"
+          value={inputValue}
+          onChange={handleInputChange}
+          className="nodrag text-sm"
+        />
       </div>
       <Handle
         type="source"

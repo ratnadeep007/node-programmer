@@ -153,52 +153,39 @@ function AppContent() {
 
   // Listen for node value changes
   useEffect(() => {
-    const handleNodeValueChanged = (event: CustomEvent<{ id: string; value: any }>) => {
-      const { id, value } = event.detail;
+    const handleNodeValueChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ id: string; value: any; target?: string; targetHandle?: string }>).detail;
       
-      setNodes(nds => 
-        nds.map(node => {
+      // Update nodes based on the node value change
+      setNodes(nds => {
+        return nds.map(node => {
           // Update the node that changed
-          if (node.id === id) {
-            return { ...node, data: { ...node.data, value } };
+          if (node.id === detail.id) {
+            return { ...node, data: { ...node.data, value: detail.value } };
           }
-          
-          // If this is a comparison or string operation node, update its input values
-          if (node.type === 'comparison' || node.type === 'stringOperation') {
-            const currentEdges = edges;
-            const leftEdge = currentEdges.find(e => e.target === node.id && e.targetHandle === 'left');
-            const rightEdge = currentEdges.find(e => e.target === node.id && e.targetHandle === 'right');
-            
-            if (leftEdge && leftEdge.source === id) {
-              return { 
-                ...node, 
-                data: { 
-                  ...node.data, 
-                  leftValue: value 
-                } 
-              };
-            }
-            if (rightEdge && rightEdge.source === id) {
-              return { 
-                ...node, 
-                data: { 
-                  ...node.data, 
-                  rightValue: value 
-                } 
-              };
-            }
-          }
-          
           return node;
-        })
-      );
+        });
+      });
+      
+      // Find connected edges and propagate the value to target nodes
+      const connectedEdges = edges.filter(e => e.source === detail.id);
+      for (const edge of connectedEdges) {
+        // Create a new event with target information included
+        const targetEvent = new CustomEvent('nodeValueChanged', {
+          detail: { 
+            id: detail.id, 
+            value: detail.value,
+            target: edge.target,
+            targetHandle: edge.targetHandle
+          }
+        });
+        window.dispatchEvent(targetEvent);
+      }
     };
 
-    window.addEventListener('nodeValueChanged', handleNodeValueChanged as EventListener);
-    return () => {
-      window.removeEventListener('nodeValueChanged', handleNodeValueChanged as EventListener);
-    };
-  }, [edges]);  
+    window.addEventListener('nodeValueChanged', handleNodeValueChanged);
+    return () => window.removeEventListener('nodeValueChanged', handleNodeValueChanged);
+  }, [edges, setNodes]);
 
   // Update display nodes when their source nodes change
   useEffect(() => {
@@ -451,6 +438,11 @@ function AppContent() {
             nodeTypes={nodeTypes}
             fitView
             deleteKeyCode={['Backspace', 'Delete']}
+            defaultEdgeOptions={{
+              type: 'smoothstep',
+              style: { strokeWidth: 2 },
+              animated: true
+            }}
           >
             <Background />
             <Controls />
