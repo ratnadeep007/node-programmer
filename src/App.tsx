@@ -371,13 +371,13 @@ function AppContent() {
     setContextMenu(null);
   }, []);
 
-  const handleSearchFromContextMenu = useCallback(() => {
-    const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
-    if (searchInput) {
-      searchInput.focus();
-      searchInput.select();
-    }
-  }, []);
+  // const handleSearchFromContextMenu = useCallback(() => {
+  //   const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+  //   if (searchInput) {
+  //     searchInput.focus();
+  //     searchInput.select();
+  //   }
+  // }, []);
 
   const handleAddNode = useCallback((type: string, position: { flowPosition: { x: number, y: number } }) => {
     const id = `${type}_${Date.now()}`;
