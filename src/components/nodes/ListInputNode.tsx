@@ -54,28 +54,6 @@ export default function ListInputNode({ id, data }: ListInputNodeProps) {
     }
   };
 
-  const clearArray = () => {
-    setCurrentArray([]);
-    data.value = '[]';
-    const event = new CustomEvent('nodeValueChanged', {
-      detail: { id, value: '[]' }
-    });
-    window.dispatchEvent(event);
-  };
-
-  const removeLastItem = () => {
-    if (currentArray.length > 0) {
-      const newArray = currentArray.slice(0, -1);
-      setCurrentArray(newArray);
-      const arrayString = JSON.stringify(newArray);
-      data.value = arrayString;
-      const event = new CustomEvent('nodeValueChanged', {
-        detail: { id, value: arrayString }
-      });
-      window.dispatchEvent(event);
-    }
-  };
-
   return (
     <div className="bg-background border-2 rounded-lg p-3 min-w-[200px]">
       <div className="flex flex-col gap-2">
@@ -124,26 +102,6 @@ export default function ListInputNode({ id, data }: ListInputNodeProps) {
             disabled={!inputValue}
           >
             Add
-          </Button>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="nodrag"
-            onClick={removeLastItem}
-            disabled={currentArray.length === 0}
-          >
-            Remove Last
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="nodrag"
-            onClick={clearArray}
-            disabled={currentArray.length === 0}
-          >
-            Clear
           </Button>
         </div>
       </div>
